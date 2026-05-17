@@ -376,7 +376,7 @@ const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, on
     <AnimatePresence>
       <motion.div
         initial={{ y: '100%' }}
-        animate={{ y: 0, height: isExpanded ? '50vh' : '64px' }}
+        animate={{ y: 0, height: isExpanded ? '55vh' : '64px' }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
         drag="y"
@@ -388,7 +388,7 @@ const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, on
           if (offset.y > 50 || velocity.y > 500) setIsExpanded(false);
           if (offset.y < -50 || velocity.y < -500) setIsExpanded(true);
         }}
-        className="fixed bottom-0 left-0 right-0 z-[100] bg-surface-card border-t border-surface-border rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
+        className="fixed bottom-0 left-0 right-0 z-[200] bg-surface-card border-t border-surface-border rounded-t-3xl flex flex-col shadow-2xl overflow-hidden"
       >
         {/* Handle / Header */}
         <div 
@@ -581,7 +581,7 @@ const MainView = ({
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
-      {/* Desktop Panel */}
+      {/* Desktop Panel - hidden on mobile */}
       <div className="hidden md:flex w-[320px] shrink-0 border-r border-surface-border bg-surface-card flex-col overflow-hidden">
         {hasActiveRide ? (
           isPassenger ? (
@@ -615,8 +615,8 @@ const MainView = ({
         )}
       </div>
 
-      {/* Mobile Sheets */}
-      <div className="md:hidden">
+      {/* Mobile Sheets - shown only on mobile */}
+      <div className="md:hidden fixed inset-x-0 bottom-0 z-[200]">
         {hasActiveRide ? (
           isPassenger ? (
             <ActiveJourneyPassengerMobile ride={activeRide} onCancel={onCancelRide} />
