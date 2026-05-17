@@ -759,10 +759,12 @@ export default function Dashboard({ user, setUser }) {
       const res = await fetch(`${BACKEND_URL}/api/rides/active/passenger/${user.id}`);
       if (res.ok) {
         const data = await res.json();
-        setActiveRide(data);
-        if (data && data.status === 'accepted') {
-          setRequestTimeout(0); // Cancel countdown!
-        }
+        setActiveRide(prev => {
+          // Don't restore a ride if we just cancelled (requestTimeout is 0 and no active ride)
+          if (!data) return null;
+          if (data.status === 'accepted') setRequestTimeout(0);
+          return data;
+        });
       }
     } catch (err) {
       console.error('Failed to fetch active passenger ride:', err);
@@ -1015,6 +1017,10 @@ export default function Dashboard({ user, setUser }) {
         body: JSON.stringify({ status: 'void' })
       });
       setActiveRide(null);
+      setRequestTimeout(0);
+      setDraftPoints([]);
+      setOsrmRoute(null);
+      setRequestedFare('');
       alert("✅ Ride request cancelled.");
     } catch (err) {
       console.error("Cancel ride error:", err);
