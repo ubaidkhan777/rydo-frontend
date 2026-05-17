@@ -8,13 +8,15 @@ import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { fetchRoadRoute } from '../utils/distance';
 import { reverseGeocode } from '../utils/geocoding';
 
-// Hook to detect mobile screen
+// Hook to detect mobile screen — uses matchMedia to stay in sync with Tailwind's md: breakpoint
 function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const mq = window.matchMedia('(max-width: 767px)');
+  const [isMobile, setIsMobile] = useState(mq.matches);
   useEffect(() => {
-    const handler = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handler);
-    return () => window.removeEventListener('resize', handler);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    setIsMobile(mq.matches); // sync immediately on mount
+    return () => mq.removeEventListener('change', handler);
   }, []);
   return isMobile;
 }
