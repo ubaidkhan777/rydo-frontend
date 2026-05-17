@@ -361,7 +361,7 @@ const DriverPanelDesktop = ({ rides, loading, onRefresh, setActiveRide, user, ha
 );
 
 const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, onSubmit, onClear, osrmRoute, submitting, activeRide, requestTimeout, onCancel }) => {
-  const [isExpanded, setIsExpanded] = useState(draftPoints.length > 0);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Auto-expand when a point is placed on map
   useEffect(() => {
