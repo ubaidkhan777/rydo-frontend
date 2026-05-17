@@ -682,6 +682,9 @@ export default function Dashboard({ user, setUser }) {
     }
   });
 
+  // Cancelled ride ref — prevents polling from restoring a just-cancelled ride
+  const cancelledRideIdRef = React.useRef(null);
+
   // Countdown & Simulation states
   const [requestTimeout, setRequestTimeout] = useState(0);
   const [driverLocation, setDriverLocation] = useState(null);
@@ -759,12 +762,15 @@ export default function Dashboard({ user, setUser }) {
       const res = await fetch(`${BACKEND_URL}/api/rides/active/passenger/${user.id}`);
       if (res.ok) {
         const data = await res.json();
-        setActiveRide(prev => {
-          // Don't restore a ride if we just cancelled (requestTimeout is 0 and no active ride)
-          if (!data) return null;
-          if (data.status === 'accepted') setRequestTimeout(0);
-          return data;
-        });
+        // Don't restore a ride we just cancelled
+        if (data && data.id === cancelledRideIdRef.current) return;
+        if (!data) {
+          cancelledRideIdRef.current = null;
+        }
+        setActiveRide(data);
+        if (data && data.status === 'accepted') {
+          setRequestTimeout(0);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch active passenger ride:', err);
@@ -1011,6 +1017,7 @@ export default function Dashboard({ user, setUser }) {
   const handleCancelRide = async () => {
     if (!activeRide) return;
     try {
+      cancelledRideIdRef.current = activeRide.id;
       await fetch(`${BACKEND_URL}/api/rides/${activeRide.id}/void`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
