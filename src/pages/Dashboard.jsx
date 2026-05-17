@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Map from '../components/Map';
@@ -7,6 +7,17 @@ import { Radio, Search, PlusCircle, RefreshCw, Menu, ChevronUp, ChevronDown, Wif
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { fetchRoadRoute } from '../utils/distance';
 import { reverseGeocode } from '../utils/geocoding';
+
+// Hook to detect mobile screen
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+  return isMobile;
+}
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || 'https://rydo-backend-4yr6.onrender.com').replace(/\/login\/?$/, '');
 
@@ -578,76 +589,81 @@ const MainView = ({
 }) => {
   const isPassenger = user?.role === 'passenger';
   const hasActiveRide = activeRide && activeRide.status === 'accepted';
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-1 overflow-hidden relative">
       {/* Desktop Panel - hidden on mobile */}
-      <div className="hidden md:flex w-[320px] shrink-0 border-r border-surface-border bg-surface-card flex-col overflow-hidden">
-        {hasActiveRide ? (
-          isPassenger ? (
-            <ActiveJourneyPassenger ride={activeRide} onCancel={onCancelRide} />
+      {!isMobile && (
+        <div className="w-[320px] shrink-0 border-r border-surface-border bg-surface-card flex flex-col overflow-hidden">
+          {hasActiveRide ? (
+            isPassenger ? (
+              <ActiveJourneyPassenger ride={activeRide} onCancel={onCancelRide} />
+            ) : (
+              <ActiveJourneyDriver ride={activeRide} onComplete={onCompleteRide} />
+            )
+          ) : isPassenger ? (
+            <PassengerPanelDesktop
+              draftPoints={draftPoints}
+              requestedFare={requestedFare}
+              setRequestedFare={setRequestedFare}
+              onSubmit={onSubmitRequest}
+              onClear={() => setDraftPoints([])}
+              osrmRoute={osrmRoute}
+              submitting={submitting}
+              activeRide={activeRide}
+              requestTimeout={requestTimeout}
+              onCancel={onCancelRide}
+            />
           ) : (
-            <ActiveJourneyDriver ride={activeRide} onComplete={onCompleteRide} />
-          )
-        ) : isPassenger ? (
-          <PassengerPanelDesktop
-            draftPoints={draftPoints}
-            requestedFare={requestedFare}
-            setRequestedFare={setRequestedFare}
-            onSubmit={onSubmitRequest}
-            onClear={() => setDraftPoints([])}
-            osrmRoute={osrmRoute}
-            submitting={submitting}
-            activeRide={activeRide}
-            requestTimeout={requestTimeout}
-            onCancel={onCancelRide}
-          />
-        ) : (
-          <DriverPanelDesktop
-            rides={rides}
-            loading={loading}
-            onRefresh={onRefresh}
-            setActiveRide={setActiveRide}
-            user={user}
-            handleAccept={handleAccept}
-            handleReject={handleReject}
-          />
-        )}
-      </div>
+            <DriverPanelDesktop
+              rides={rides}
+              loading={loading}
+              onRefresh={onRefresh}
+              setActiveRide={setActiveRide}
+              user={user}
+              handleAccept={handleAccept}
+              handleReject={handleReject}
+            />
+          )}
+        </div>
+      )}
 
-      {/* Mobile Sheets - shown only on mobile */}
-      <div className="md:hidden fixed inset-x-0 bottom-0 z-[200]">
-        {hasActiveRide ? (
-          isPassenger ? (
-            <ActiveJourneyPassengerMobile ride={activeRide} onCancel={onCancelRide} />
+      {/* Mobile Sheets */}
+      {isMobile && (
+        <div className="fixed inset-x-0 bottom-0 z-[200]">
+          {hasActiveRide ? (
+            isPassenger ? (
+              <ActiveJourneyPassengerMobile ride={activeRide} onCancel={onCancelRide} />
+            ) : (
+              <ActiveJourneyDriverMobile ride={activeRide} onComplete={onCompleteRide} />
+            )
+          ) : isPassenger ? (
+            <PassengerPanelMobile
+              draftPoints={draftPoints}
+              requestedFare={requestedFare}
+              setRequestedFare={setRequestedFare}
+              onSubmit={onSubmitRequest}
+              onClear={() => setDraftPoints([])}
+              osrmRoute={osrmRoute}
+              submitting={submitting}
+              activeRide={activeRide}
+              requestTimeout={requestTimeout}
+              onCancel={onCancelRide}
+            />
           ) : (
-            <ActiveJourneyDriverMobile ride={activeRide} onComplete={onCompleteRide} />
-          )
-        ) : isPassenger ? (
-          <PassengerPanelMobile
-            draftPoints={draftPoints}
-            requestedFare={requestedFare}
-            setRequestedFare={setRequestedFare}
-            onSubmit={onSubmitRequest}
-            onClear={() => setDraftPoints([])}
-            osrmRoute={osrmRoute}
-            submitting={submitting}
-            activeRide={activeRide}
-            requestTimeout={requestTimeout}
-            onCancel={onCancelRide}
-          />
-        ) : (
-          <DriverPanelMobile
-            rides={rides}
-            loading={loading}
-            onRefresh={onRefresh}
-            setActiveRide={setActiveRide}
-            user={user}
-            handleAccept={handleAccept}
-            handleReject={handleReject}
-          />
-        )}
-      </div>
+            <DriverPanelMobile
+              rides={rides}
+              loading={loading}
+              onRefresh={onRefresh}
+              setActiveRide={setActiveRide}
+              user={user}
+              handleAccept={handleAccept}
+              handleReject={handleReject}
+            />
+          )}
+        </div>
+      )}
 
       {/* Map View */}
       <div className="flex-1 relative overflow-hidden bg-surface-base">
@@ -683,7 +699,7 @@ export default function Dashboard({ user, setUser }) {
   });
 
   // Cancelled ride ref — prevents polling from restoring a just-cancelled ride
-  const cancelledRideIdRef = React.useRef(null);
+  const cancelledRideIdRef = useRef(null);
 
   // Countdown & Simulation states
   const [requestTimeout, setRequestTimeout] = useState(0);
