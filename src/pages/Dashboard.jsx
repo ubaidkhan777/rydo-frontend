@@ -766,9 +766,29 @@ export default function Dashboard({ user, setUser }) {
         if (data && data.id === cancelledRideIdRef.current) return;
         if (!data) {
           cancelledRideIdRef.current = null;
+          setActiveRide(null);
+          return;
+        }
+        // If pending ride found but no countdown running, it's a stale ride from old session — void it
+        if (data.status === 'pending') {
+          setRequestTimeout(prev => {
+            if (prev <= 0) {
+              // Auto-void stale ride
+              cancelledRideIdRef.current = data.id;
+              fetch(`${BACKEND_URL}/api/rides/${data.id}/void`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'void' })
+              }).catch(console.error);
+              setActiveRide(null);
+              return 0;
+            }
+            return prev;
+          });
+          return;
         }
         setActiveRide(data);
-        if (data && data.status === 'accepted') {
+        if (data.status === 'accepted') {
           setRequestTimeout(0);
         }
       }
@@ -779,7 +799,30 @@ export default function Dashboard({ user, setUser }) {
 
   useEffect(() => {
     if (user?.role !== 'passenger') return;
-    fetchPassengerActiveRide();
+    // On first load, void any stale pending ride immediately
+    const initPassengerRide = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/rides/active/passenger/${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status === 'pending') {
+            // Stale pending ride — void it silently
+            cancelledRideIdRef.current = data.id;
+            await fetch(`${BACKEND_URL}/api/rides/${data.id}/void`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ status: 'void' })
+            });
+            setActiveRide(null);
+          } else {
+            setActiveRide(data);
+          }
+        }
+      } catch (err) {
+        console.error('Init passenger ride error:', err);
+      }
+    };
+    initPassengerRide();
     const interval = setInterval(fetchPassengerActiveRide, 5000);
     return () => clearInterval(interval);
   }, [fetchPassengerActiveRide, user?.role]);
