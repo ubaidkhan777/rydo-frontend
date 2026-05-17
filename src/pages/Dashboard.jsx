@@ -210,7 +210,7 @@ const ActiveJourneyDriverMobile = ({ ride, onComplete }) => {
 };
 
 
-const BroadcastTimerCard = ({ requestTimeout }) => (
+const BroadcastTimerCard = ({ requestTimeout, onCancel }) => (
   <div className="bg-surface-base border border-surface-border rounded-xl p-6 text-center">
     <div className="relative w-16 h-16 mx-auto mb-4 flex items-center justify-center">
       <div className="absolute inset-0 rounded-full border-4 border-amber-400/20 border-t-amber-400 animate-spin" />
@@ -220,6 +220,12 @@ const BroadcastTimerCard = ({ requestTimeout }) => (
     <p className="text-xs text-surface-muted mt-1 leading-relaxed">
       Sending ride request to nearby Rydo drivers. Waiting for pilot acceptance.
     </p>
+    <button
+      onClick={onCancel}
+      className="mt-4 w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-bold rounded-xl transition-all"
+    >
+      Cancel Request
+    </button>
   </div>
 );
 
@@ -235,14 +241,14 @@ function interpolatePoints(start, end, steps = 15) {
   return pts;
 }
 
-const PassengerPanelDesktop = ({ draftPoints, requestedFare, setRequestedFare, onSubmit, onClear, osrmRoute, submitting, activeRide, requestTimeout }) => {
+const PassengerPanelDesktop = ({ draftPoints, requestedFare, setRequestedFare, onSubmit, onClear, osrmRoute, submitting, activeRide, requestTimeout, onCancel }) => {
   return (
     <div className="flex flex-col h-full">
       <div className="px-5 py-4 border-b border-surface-border shrink-0">
         <h2 className="text-xs font-bold text-surface-muted uppercase tracking-widest mb-4">Request a Ride</h2>
 
         {activeRide && activeRide.status === 'pending' ? (
-          <BroadcastTimerCard requestTimeout={requestTimeout} />
+          <BroadcastTimerCard requestTimeout={requestTimeout} onCancel={onCancel} />
         ) : (
           <>
             <div className="bg-surface-base border border-surface-border rounded-xl p-4 mb-4">
@@ -354,7 +360,7 @@ const DriverPanelDesktop = ({ rides, loading, onRefresh, setActiveRide, user, ha
   </div>
 );
 
-const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, onSubmit, onClear, osrmRoute, submitting, activeRide, requestTimeout }) => {
+const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, onSubmit, onClear, osrmRoute, submitting, activeRide, requestTimeout, onCancel }) => {
   const [isExpanded, setIsExpanded] = useState(draftPoints.length > 0);
 
   // Auto-expand when a point is placed on map
@@ -410,7 +416,7 @@ const PassengerPanelMobile = ({ draftPoints, requestedFare, setRequestedFare, on
 
         <div className={`flex-1 overflow-y-auto px-5 py-4 min-h-0 transition-opacity duration-200 ${isExpanded ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           {activeRide && activeRide.status === 'pending' ? (
-            <BroadcastTimerCard requestTimeout={requestTimeout} />
+            <BroadcastTimerCard requestTimeout={requestTimeout} onCancel={onCancel} />
           ) : (
             <>
               <div className="bg-surface-base border border-surface-border rounded-xl p-4 mb-4">
@@ -594,6 +600,7 @@ const MainView = ({
             submitting={submitting}
             activeRide={activeRide}
             requestTimeout={requestTimeout}
+            onCancel={onCancelRide}
           />
         ) : (
           <DriverPanelDesktop
@@ -627,6 +634,7 @@ const MainView = ({
             submitting={submitting}
             activeRide={activeRide}
             requestTimeout={requestTimeout}
+            onCancel={onCancelRide}
           />
         ) : (
           <DriverPanelMobile
@@ -951,9 +959,9 @@ export default function Dashboard({ user, setUser }) {
         return;
       }
 
-      // Start 10 seconds timer
+      // Start 90 seconds timer (1.5 mins)
       setActiveRide(result);
-      setRequestTimeout(10);
+      setRequestTimeout(90);
 
       // Clear map form inputs
       setDraftPoints([]);
